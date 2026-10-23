@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>スケジュール共有　閲覧用</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Google Fonts: Inter & Noto Sans JP -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'Noto Sans JP', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+
+  <link rel="stylesheet" href="index.css">
+</head>
+<body class="min-h-screen text-slate-200 antialiased p-3 sm:p-6 md:p-8 flex justify-center items-start text-base">
+
+  <div class="w-full max-w-4xl bg-[#131c30] rounded-2xl shadow-2xl shadow-cyan-500/5 border border-cyan-500/15 overflow-hidden my-auto">
+
+    <!-- トップヘッダーバナー -->
+    <header class="tech-header text-white p-5 sm:p-7 relative overflow-hidden">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+        <div>
+          <div class="inline-flex items-center gap-2 bg-cyan-400/10 border border-cyan-400/30 backdrop-blur-md px-3.5 py-1 rounded-full text-sm font-semibold tracking-wide text-cyan-300 mb-2">
+            <i class="fa-solid fa-bolt text-cyan-300"></i> 校内情報共有ダッシュボード
+          </div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-white" style="text-shadow: 0 0 20px rgba(34,211,238,0.4);">スケジュール共有　閲覧用</h1>
+          <p class="text-cyan-100/80 text-xs sm:text-sm mt-1.5 tracking-[0.15em] uppercase">Schedule &amp; Event List</p>
+        </div>
+
+        <!-- リアルタイム集計カウンター -->
+        <div class="flex items-center gap-2 self-start sm:self-center">
+          <div class="bg-white/5 backdrop-blur-sm border border-cyan-400/20 px-4 py-2.5 rounded-xl text-center min-w-[85px]">
+            <span class="block text-xs text-white font-semibold">全予定</span>
+            <span id="statTotalCount" class="text-2xl font-bold text-white">0</span>
+          </div>
+          <div class="bg-white/5 backdrop-blur-sm border border-cyan-400/20 px-4 py-2.5 rounded-xl text-center min-w-[85px]">
+            <span class="block text-xs text-white font-semibold">本日の予定</span>
+            <span id="statTodayCount" class="text-2xl font-bold text-amber-300">0</span>
+          </div>
+          <div class="bg-white/5 backdrop-blur-sm border border-cyan-400/20 px-4 py-2.5 rounded-xl text-center min-w-[85px]">
+            <span class="block text-xs text-white font-semibold">終了した予定</span>
+            <span id="statPastCount" class="text-2xl font-bold text-slate-300">0</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="p-4 sm:p-6 md:p-8 space-y-6">
+
+      <!-- 絞り込みボタン -->
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <button type="button" id="filterToggleBtn" onclick="toggleFilterPanel()" class="px-4 py-2.5 bg-slate-800/60 hover:bg-slate-700/60 text-white border border-slate-600 rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-sm">
+          <i class="fa-solid fa-filter text-cyan-400"></i> 絞り込み
+          <span id="filterActiveBadge" class="hidden bg-cyan-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">0</span>
+          <i id="filterChevron" class="fa-solid fa-chevron-down text-xs transition-transform duration-200"></i>
+        </button>
+      </div>
+
+      <!-- 絞り込みパネル（ボタンで開閉） -->
+      <div id="filterPanel" class="hidden space-y-6 bg-slate-700/30 border border-slate-600/50 rounded-2xl p-4 sm:p-5">
+
+        <!-- 担当者フィルタータブ -->
+        <section class="space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-user-gear text-cyan-400"></i> 担当の先生で絞り込み
+            </h2>
+            <span id="currentTeacherLabel" class="text-sm font-semibold text-cyan-400">表示中: 全員</span>
+          </div>
+          <div id="teacherTabs" class="flex items-center gap-2.5 overflow-x-auto pb-2 pt-1 -mx-1 px-1">
+            <!-- JavaScriptで先生ボタンが生成されます -->
+          </div>
+        </section>
+
+        <!-- 日にち絞り込み（当日から7日後までの8日間） -->
+        <section class="space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-calendar-days text-cyan-400"></i> 日にちで絞り込み（今日から1週間後まで）
+            </h2>
+            <span id="currentDateLabel" class="text-sm font-semibold text-cyan-400">表示中: すべての日</span>
+          </div>
+          <div id="dateTabs" class="flex items-center gap-2.5 overflow-x-auto pb-2 pt-1 -mx-1 px-1">
+            <!-- JavaScriptで日付ボタンが生成されます -->
+          </div>
+        </section>
+
+        <!-- 種別絞り込み -->
+        <section class="space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-tags text-cyan-400"></i> 種別で絞り込み
+            </h2>
+            <span id="currentTypeLabel" class="text-sm font-semibold text-cyan-400">表示中: すべての種別</span>
+          </div>
+          <div id="typeTabs" class="flex items-center gap-2.5 overflow-x-auto pb-2 pt-1 -mx-1 px-1">
+            <!-- JavaScriptで種別ボタンが生成されます -->
+          </div>
+        </section>
+
+      </div>
+
+      <!-- 本日・これからの予定 -->
+      <section class="space-y-3">
+        <div class="flex items-center justify-between px-1">
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-calendar-day text-cyan-400"></i> 今後の予定・本日の予定
+          </h2>
+          <span id="upcomingCountText" class="text-sm text-slate-300">0 件</span>
+        </div>
+        <ul id="upcomingTaskList" class="space-y-3 min-h-[60px]"></ul>
+      </section>
+
+      <!-- 本日終了した予定 -->
+      <section class="space-y-3 pt-4 border-t border-slate-700/50">
+        <details class="group bg-slate-700/30 border border-slate-600/50 rounded-2xl p-4 transition-all" open>
+          <summary class="flex items-center justify-between font-bold text-white cursor-pointer select-none list-none">
+            <div class="flex items-center gap-2 text-base sm:text-lg">
+              <i class="fa-solid fa-circle-check text-slate-400 group-open:text-cyan-400 transition-colors"></i>
+              <span>本日終了した予定</span>
+              <span id="pastCountText" class="text-xs bg-slate-700/60 text-white px-2.5 py-0.5 rounded-full ml-1">0 件</span>
+            </div>
+            <i class="fa-solid fa-chevron-down text-slate-400 text-sm group-open:rotate-180 transition-transform duration-200"></i>
+          </summary>
+          <ul id="pastTaskList" class="space-y-3 mt-4"></ul>
+        </details>
+      </section>
+
+    </main>
+
+    <!-- フッター -->
+    <footer class="bg-slate-900/60 border-t border-slate-700/50 px-6 py-4 text-center text-xs text-slate-400">
+      <p>スケジュール共有　閲覧用</p>
+    </footer>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+  <script src="index.js"></script>
+</body>
+</html>
